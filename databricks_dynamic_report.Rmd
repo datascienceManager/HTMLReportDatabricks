@@ -1,0 +1,636 @@
+---
+title: "📊 Dynamic Report Template — Databricks"
+author: "Your Name"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    toc_depth: 3
+    number_sections: true
+    code_folding: show
+---
+
+```{css, echo=FALSE}
+/* ============================================================
+   CUSTOM CSS STYLING
+   ============================================================ */
+
+/* General body styling */
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 15px;
+  background-color: #f5f7fa;
+  color: #2c3e50;
+}
+
+/* Page header */
+h1.title {
+  color: #1a73e8;
+  font-size: 2.2em;
+  border-bottom: 3px solid #1a73e8;
+  padding-bottom: 10px;
+}
+
+/* Section headings */
+h1, h2, h3 {
+  color: #2c3e50;
+}
+
+h2 {
+  border-left: 5px solid #1a73e8;
+  padding-left: 10px;
+  margin-top: 30px;
+}
+
+/* Info / highlight box */
+.info-box {
+  background-color: #e8f4fd;
+  border-left: 5px solid #1a73e8;
+  padding: 12px 16px;
+  margin: 15px 0;
+  border-radius: 4px;
+}
+
+/* Warning box */
+.warning-box {
+  background-color: #fff8e1;
+  border-left: 5px solid #f39c12;
+  padding: 12px 16px;
+  margin: 15px 0;
+  border-radius: 4px;
+}
+
+/* Success box */
+.success-box {
+  background-color: #e8f5e9;
+  border-left: 5px solid #27ae60;
+  padding: 12px 16px;
+  margin: 15px 0;
+  border-radius: 4px;
+}
+
+/* KPI metric cards */
+.kpi-row {
+  display: flex;
+  gap: 16px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.kpi-card {
+  flex: 1;
+  min-width: 160px;
+  background: white;
+  border-radius: 8px;
+  padding: 18px 22px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.kpi-card .kpi-value {
+  font-size: 2em;
+  font-weight: bold;
+  color: #1a73e8;
+}
+
+.kpi-card .kpi-label {
+  font-size: 0.85em;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Code chunk styling */
+pre {
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+}
+```
+
+```{r setup, include=FALSE}
+# ============================================================
+# SETUP CHUNK — Runs silently, loads all libraries
+# ============================================================
+knitr::opts_chunk$set(
+  echo    = TRUE,      # Show code in output
+  warning = FALSE,     # Hide warnings
+  message = FALSE,     # Hide messages
+  fig.width  = 9,
+  fig.height = 5,
+  fig.align  = "center"
+)
+
+# --- Install packages (run once, then comment out) ----------
+# install.packages(c("knitr","kableExtra","DT","ggplot2","plotly",
+#                    "dplyr","leaflet","htmlwidgets","flexdashboard",
+#                    "scales","RColorBrewer"))
+
+# --- Load libraries -----------------------------------------
+library(knitr)
+library(kableExtra)
+library(DT)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(leaflet)
+library(htmlwidgets)
+library(scales)
+library(RColorBrewer)
+
+# --- Create sample dataset ----------------------------------
+set.seed(42)
+sales_data <- data.frame(
+  Month     = month.abb,
+  Region    = rep(c("North", "South", "East", "West"), length.out = 12),
+  Sales     = round(runif(12, 50000, 200000), 0),
+  Target    = round(runif(12, 80000, 180000), 0),
+  Growth    = round(runif(12, -10, 30), 1),
+  Customers = sample(100:500, 12)
+)
+
+sales_data <- sales_data %>%
+  mutate(
+    Achievement = round((Sales / Target) * 100, 1),
+    Status      = ifelse(Sales >= Target, "✅ Met", "❌ Missed")
+  )
+```
+
+---
+
+# Introduction {.tabset}
+
+<div class="info-box">
+📌 **About this Report:** This template demonstrates every major component you need for
+dynamic HTML reports in Databricks using R Markdown. Each section below covers a
+different package with working, copy-paste-ready examples.
+</div>
+
+## KPI Summary Cards
+
+KPI cards are built with plain HTML + CSS — no package needed.
+
+```{r kpi-cards, echo=FALSE}
+total_sales   <- sum(sales_data$Sales)
+avg_growth    <- mean(sales_data$Growth)
+top_region    <- sales_data %>% group_by(Region) %>%
+                   summarise(s = sum(Sales)) %>% arrange(desc(s)) %>% slice(1) %>% pull(Region)
+met_target    <- sum(sales_data$Status == "✅ Met")
+```
+
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-value">`r paste0("$", formatC(total_sales, format="f", digits=0, big.mark=","))`</div>
+    <div class="kpi-label">Total Sales</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value">`r paste0(round(avg_growth,1), "%")`</div>
+    <div class="kpi-label">Avg Growth</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value">`r top_region`</div>
+    <div class="kpi-label">Top Region</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value">`r met_target` / 12</div>
+    <div class="kpi-label">Targets Met</div>
+  </div>
+</div>
+
+## Data Preview
+
+```{r data-preview}
+# Quick look at the dataset used throughout this report
+head(sales_data, 6)
+```
+
+---
+
+# kableExtra — Styled Static Tables
+
+`kableExtra` turns plain R tables into beautifully formatted HTML tables.
+
+## Basic Styled Table
+
+```{r kable-basic}
+sales_data %>%
+  select(Month, Region, Sales, Target, Status) %>%
+  kable(
+    caption = "📋 Monthly Sales vs Target",
+    format  = "html",
+    format.args = list(big.mark = ",")
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position   = "center",
+    font_size  = 13
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#1a73e8", color = "white") %>%
+  column_spec(3, bold = TRUE, color = "white",
+              background = ifelse(sales_data$Sales >= sales_data$Target,
+                                  "#27ae60", "#e74c3c"))
+```
+
+## Grouped Headers + Footnote
+
+```{r kable-grouped}
+sales_data %>%
+  select(Month, Sales, Target, Achievement, Growth) %>%
+  kable(
+    caption = "📊 Performance Summary with Grouped Headers",
+    col.names = c("Month", "Sales ($)", "Target ($)", "Achievement (%)", "Growth (%)"),
+    format = "html"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = TRUE) %>%
+  add_header_above(c(" " = 1,
+                     "Financial Metrics" = 2,
+                     "Performance Metrics" = 2)) %>%
+  row_spec(0, bold = TRUE, background = "#2c3e50", color = "white") %>%
+  footnote(
+    general = "Data generated for illustration purposes.",
+    number  = c("Achievement = Sales / Target × 100",
+                "Growth compared to previous period")
+  )
+```
+
+---
+
+# DT — Interactive Searchable Tables
+
+`DT` creates fully interactive tables — sortable, searchable, paginated, exportable.
+
+## Full-Featured DT Table
+
+```{r dt-full}
+datatable(
+  sales_data,
+  caption  = "🔍 Interactive Sales Table — Search, Sort, Export",
+  rownames = FALSE,
+  filter   = "top",           # Column-level filters
+  extensions = "Buttons",
+  options = list(
+    pageLength = 6,
+    scrollX    = TRUE,
+    dom        = "Bfrtip",   # B=Buttons, f=search, r=processing, t=table, i=info, p=pagination
+    buttons    = list("copy", "csv", "excel", "pdf", "print"),
+    columnDefs = list(
+      list(className = "dt-center", targets = "_all")
+    )
+  )
+) %>%
+  formatCurrency(columns = c("Sales", "Target"), currency = "$", digits = 0) %>%
+  formatStyle(
+    "Achievement",
+    background = styleColorBar(range(sales_data$Achievement), "#1a73e8"),
+    backgroundSize    = "100% 80%",
+    backgroundRepeat  = "no-repeat",
+    backgroundPosition= "center"
+  ) %>%
+  formatStyle(
+    "Status",
+    color = styleEqual(c("✅ Met", "❌ Missed"), c("#27ae60", "#e74c3c")),
+    fontWeight = "bold"
+  )
+```
+
+<div class="info-box">
+💡 **Tip:** Use the **Export buttons** above to download this table as CSV, Excel, or PDF.
+The column filter boxes let you filter each column independently.
+</div>
+
+---
+
+# ggplot2 — Static Charts
+
+`ggplot2` is the most powerful static charting library in R.
+
+## Bar Chart
+
+```{r ggplot-bar}
+ggplot(sales_data, aes(x = Month, y = Sales, fill = Region)) +
+  geom_col(show.legend = TRUE, width = 0.7) +
+  geom_hline(yintercept = mean(sales_data$Target),
+             linetype = "dashed", color = "#e74c3c", linewidth = 0.8) +
+  annotate("text", x = 1, y = mean(sales_data$Target) + 5000,
+           label = "Avg Target", color = "#e74c3c", hjust = 0, size = 3.5) +
+  scale_y_continuous(labels = label_dollar(scale = 1e-3, suffix = "K")) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title    = "Monthly Sales by Region",
+    subtitle = "Dashed line = average target",
+    x = "Month", y = "Sales", fill = "Region",
+    caption  = "Source: Sample dataset"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title    = element_text(face = "bold", color = "#2c3e50", size = 16),
+    plot.subtitle = element_text(color = "#7f8c8d"),
+    panel.grid.major.x = element_blank(),
+    legend.position = "top"
+  )
+```
+
+## Line Chart with Points
+
+```{r ggplot-line}
+ggplot(sales_data, aes(x = seq_along(Month))) +
+  geom_ribbon(aes(ymin = Target, ymax = Sales),
+              fill = "#1a73e8", alpha = 0.15) +
+  geom_line(aes(y = Sales,  color = "Actual Sales"),  linewidth = 1.2) +
+  geom_line(aes(y = Target, color = "Target"),  linewidth = 1.2, linetype = "dashed") +
+  geom_point(aes(y = Sales,  color = "Actual Sales"),  size = 3) +
+  geom_point(aes(y = Target, color = "Target"),  size = 3, shape = 17) +
+  scale_x_continuous(breaks = 1:12, labels = month.abb) +
+  scale_y_continuous(labels = label_dollar(scale = 1e-3, suffix = "K")) +
+  scale_color_manual(values = c("Actual Sales" = "#1a73e8", "Target" = "#e74c3c")) +
+  labs(
+    title = "Sales vs Target — Monthly Trend",
+    x = "Month", y = "Amount (USD)", color = NULL
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title  = element_text(face = "bold", color = "#2c3e50"),
+    legend.position = "top"
+  )
+```
+
+## Scatter Plot
+
+```{r ggplot-scatter}
+ggplot(sales_data, aes(x = Customers, y = Sales, color = Region, size = Achievement)) +
+  geom_point(alpha = 0.8) +
+  geom_smooth(method = "lm", se = TRUE, color = "#2c3e50",
+              fill = "#bdc3c7", linewidth = 0.8, linetype = "dashed") +
+  scale_y_continuous(labels = label_dollar(scale = 1e-3, suffix = "K")) +
+  scale_size_continuous(range = c(4, 12)) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(
+    title = "Sales vs Number of Customers",
+    subtitle = "Point size = Target Achievement %",
+    x = "Number of Customers", y = "Sales", color = "Region", size = "Achievement %"
+  ) +
+  theme_light(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", color = "#2c3e50"))
+```
+
+---
+
+# plotly — Interactive Charts
+
+`plotly` makes your `ggplot2` charts fully interactive — hover, zoom, pan, click.
+
+## ggplot → plotly Conversion
+
+```{r plotly-ggplotly}
+# Build a ggplot first, then wrap with ggplotly()
+p <- ggplot(sales_data, aes(
+    x    = Month,
+    y    = Sales,
+    fill = Region,
+    text = paste0(
+      "Month: ", Month, "<br>",
+      "Region: ", Region, "<br>",
+      "Sales: $", formatC(Sales, format="f", big.mark=",", digits=0), "<br>",
+      "Achievement: ", Achievement, "%"
+    )
+  )) +
+  geom_col(width = 0.7) +
+  scale_y_continuous(labels = label_dollar(scale=1e-3, suffix="K")) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "Interactive Sales by Month (hover for details)",
+       x = "Month", y = "Sales") +
+  theme_minimal()
+
+ggplotly(p, tooltip = "text") %>%
+  layout(
+    hovermode = "x unified",
+    legend    = list(orientation = "h", y = -0.2)
+  )
+```
+
+## Native plotly Chart
+
+```{r plotly-native}
+plot_ly(
+  data = sales_data,
+  x    = ~Month,
+  y    = ~Sales,
+  name = "Actual Sales",
+  type = "scatter",
+  mode = "lines+markers",
+  line   = list(color = "#1a73e8", width = 2.5),
+  marker = list(size = 8, color = "#1a73e8")
+) %>%
+  add_trace(
+    y    = ~Target,
+    name = "Target",
+    mode = "lines+markers",
+    line   = list(color = "#e74c3c", width = 2, dash = "dash"),
+    marker = list(size = 7, color = "#e74c3c", symbol = "triangle-up")
+  ) %>%
+  layout(
+    title  = list(text = "Sales vs Target — Interactive Trend", x = 0),
+    xaxis  = list(title = "Month"),
+    yaxis  = list(title = "Amount ($)", tickformat = "$,.0f"),
+    legend = list(orientation = "h", y = -0.2),
+    hovermode = "x unified"
+  )
+```
+
+---
+
+# htmlwidgets — Leaflet Map
+
+`htmlwidgets` is the framework that powers interactive R widgets. `leaflet` is one of the best-known examples.
+
+## Interactive Map
+
+```{r leaflet-map}
+# Sample office / regional locations
+locations <- data.frame(
+  name  = c("HQ - New York", "London Office", "Dubai Office",
+             "Singapore Office", "Sydney Office"),
+  lat   = c(40.7128, 51.5074, 25.2048, 1.3521, -33.8688),
+  lng   = c(-74.0060, -0.1278, 55.2708, 103.8198, 151.2093),
+  staff = c(500, 320, 180, 210, 150),
+  color = c("red", "blue", "green", "orange", "purple")
+)
+
+leaflet(locations) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%       # Clean map style
+  addCircleMarkers(
+    lat         = ~lat,
+    lng         = ~lng,
+    radius      = ~sqrt(staff) * 1.5,                   # Size by staff count
+    color       = ~color,
+    fillOpacity = 0.7,
+    popup       = ~paste0(
+      "<b>", name, "</b><br>",
+      "👥 Staff: ", staff, "<br>",
+      "📍 ", round(lat,2), ", ", round(lng,2)
+    ),
+    label = ~name
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    colors   = c("red","blue","green","orange","purple"),
+    labels   = locations$name,
+    title    = "Office Locations"
+  ) %>%
+  setView(lng = 20, lat = 25, zoom = 2)
+```
+
+<div class="info-box">
+🗺️ **Tip:** Click any circle to see the popup. Scroll to zoom. Drag to pan.
+Circle size reflects staff count.
+</div>
+
+---
+
+# flexdashboard — Dashboard Layout
+
+`flexdashboard` lets you arrange content into side-by-side columns and rows.
+Below we simulate the layout using HTML/CSS (since full flexdashboard needs its own output format).
+
+<div class="warning-box">
+⚠️ **Note:** Full `flexdashboard` requires `output: flexdashboard::flex_dashboard` in the YAML
+header and its own `.Rmd` file. The layout below shows how it looks conceptually.
+See the **bonus template** at the bottom of this report for a complete flexdashboard example.
+</div>
+
+```{r flexdashboard-gauges}
+# Gauge-style metric — requires flexdashboard
+# In a real flexdashboard .Rmd these would render as circular gauges
+# Here we display the values as an info table
+
+gauge_data <- data.frame(
+  Metric  = c("Sales Target", "Customer Satisfaction", "On-Time Delivery", "Budget Used"),
+  Value   = c(87, 92, 78, 65),
+  Min     = c(0, 0, 0, 0),
+  Max     = c(100, 100, 100, 100),
+  Symbol  = c("%", "%", "%", "%")
+)
+
+kable(gauge_data, caption = "📊 KPI Gauges (values for flexdashboard::gauge())") %>%
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE) %>%
+  column_spec(2, bold = TRUE,
+              background = ifelse(gauge_data$Value >= 80, "#d5f5e3",
+                           ifelse(gauge_data$Value >= 60, "#fef9e7", "#fde8e8")))
+```
+
+**In a real flexdashboard `.Rmd`, gauges look like this:**
+
+```r
+# flexdashboard gauge example (place inside a flexdashboard column)
+library(flexdashboard)
+gauge(87, min = 0, max = 100, symbol = "%",
+      label = "Sales Target",
+      gaugeSectors(success = c(80,100), warning = c(60,79), danger = c(0,59)))
+```
+
+---
+
+# Custom HTML & CSS Styling
+
+You can embed any HTML directly in R Markdown.
+
+## Callout Boxes
+
+<div class="success-box">
+✅ **Success:** All Q4 targets have been met. Sales grew by 18% year-over-year.
+</div>
+
+<div class="warning-box">
+⚠️ **Warning:** The West region is 12% below target. Review required before month-end.
+</div>
+
+<div class="info-box">
+ℹ️ **Info:** Next reporting period starts January 1st. Please submit your forecasts by December 20th.
+</div>
+
+## Inline R Values in Text
+
+You can embed live R calculations directly in text using backtick-r syntax:
+
+- Total sales this period: **`r paste0("$", formatC(sum(sales_data$Sales), format="f", big.mark=",", digits=0))`**
+- Months where target was met: **`r sum(sales_data$Status == "✅ Met")`** out of 12
+- Best performing month: **`r sales_data$Month[which.max(sales_data$Sales)]`**
+  with **`r paste0("$", formatC(max(sales_data$Sales), format="f", big.mark=",", digits=0))`** in sales
+
+---
+
+# Rendering in Databricks
+
+## Method 1 — Render from R Cell
+
+```r
+# Run this in a Databricks R cell to generate the HTML report
+rmarkdown::render(
+  input       = "/dbfs/your-folder/databricks_dynamic_report.Rmd",
+  output_file = "/dbfs/your-folder/output_report.html"
+)
+```
+
+## Method 2 — Display Inline in Notebook
+
+```r
+# Render and show in notebook output
+library(IRdisplay)
+html_content <- paste(
+  readLines("/dbfs/your-folder/output_report.html"),
+  collapse = "\n"
+)
+display_html(html_content)
+```
+
+## Method 3 — Save to DBFS and Share
+
+```r
+# Copy to a shared DBFS location
+file.copy(
+  from = "/dbfs/your-folder/output_report.html",
+  to   = "/dbfs/FileStore/reports/monthly_report.html"
+)
+
+# Access via:
+# https://<your-databricks-workspace>/files/reports/monthly_report.html
+```
+
+---
+
+# Summary — Package Quick Reference
+
+```{r summary-table, echo=FALSE}
+summary_df <- data.frame(
+  Package       = c("knitr / kableExtra", "DT", "ggplot2", "plotly",
+                    "leaflet", "htmlwidgets", "flexdashboard"),
+  Purpose       = c("Styled static tables", "Interactive tables",
+                    "Static publication-quality charts",
+                    "Interactive hover/zoom charts",
+                    "Interactive maps",
+                    "Framework for all interactive widgets",
+                    "Dashboard layout with gauges & value boxes"),
+  `Best For`    = c("Reports, summaries", "Data exploration",
+                    "Final presentation charts",
+                    "Exploratory & shareable charts",
+                    "Geo / location data",
+                    "Any widget package", "Executive dashboards"),
+  Interactive   = c("No","Yes","No","Yes","Yes","Yes","Yes"),
+  check.names   = FALSE
+)
+
+kable(summary_df, caption = "📦 Package Summary") %>%
+  kable_styling(bootstrap_options = c("striped","hover","condensed"), full_width = TRUE) %>%
+  row_spec(0, bold = TRUE, background = "#2c3e50", color = "white") %>%
+  column_spec(4, bold = TRUE,
+              color = ifelse(summary_df$Interactive == "Yes", "#27ae60", "#e74c3c"))
+```
+
+---
+
+*Report generated on `r Sys.time()` | Template version 1.0*
