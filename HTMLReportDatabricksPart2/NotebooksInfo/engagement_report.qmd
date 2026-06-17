@@ -1,0 +1,111 @@
+---
+title: "Streaming Engagement Report"
+subtitle: "Weekly Performance · MENA"
+date: today
+format:
+  html:
+    theme: none
+    toc: true
+    toc-location: left
+    toc-title: "Sections"
+    embed-resources: true        # single self-contained file — key for sharing
+    page-layout: full
+    css: glossy.css              # or inline the <style> block below
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(ggplot2); library(dplyr); library(tidyr); library(scales)
+library(gganimate); library(gt); library(reactable); library(plotly)
+
+pal <- list(bg="#0E1320", ink="#EEF1F7", muted="#8B95A8", grid="#1E2638",
+            gold="#F5C518", gold_d="#B8920F", violet="#8B7BF0", teal="#27C2B6")
+
+theme_glossy <- function(base_size = 13) {
+  theme_minimal(base_size) %+replace% theme(
+    plot.background  = element_rect(fill = pal$bg, color = NA),
+    panel.background = element_rect(fill = pal$bg, color = NA),
+    panel.grid.major = element_line(color = pal$grid, linewidth = .4),
+    panel.grid.minor = element_blank(),
+    text = element_text(color = pal$ink), axis.text = element_text(color = pal$muted),
+    plot.title = element_text(color = "#fff", face = "bold", size = base_size*1.4, hjust = 0),
+    legend.position = "top", legend.title = element_blank(),
+    legend.background = element_rect(fill = pal$bg, color = NA),
+    legend.key = element_rect(fill = pal$bg, color = NA))
+}
+```
+
+<!-- Inline theming so the whole page is glossy even without glossy.css -->
+```{=html}
+<style>
+:root{--bg:#070A12;--panel:#0E1320;--line:#1E2638;--ink:#EEF1F7;--muted:#8B95A8;--gold:#F5C518}
+body{background:radial-gradient(1200px 600px at 80% -10%,rgba(245,197,24,.10),transparent 60%),var(--bg);
+  color:var(--ink);font-family:Inter,system-ui,sans-serif}
+.quarto-title-block .title{background:linear-gradient(180deg,#fff,#C8CEDC);-webkit-background-clip:text;
+  background-clip:text;color:transparent;font-weight:800;letter-spacing:-.02em}
+h2{border-bottom:1px solid var(--line);padding-bottom:.3em}
+#TOC,nav{color:var(--muted)} a{color:var(--gold)}
+.cell-output img{border-radius:12px}
+</style>
+```
+
+## 01 · Engagement trend
+
+```{r}
+set.seed(42)
+days <- seq(as.Date("2026-06-09"), as.Date("2026-06-15"), by="day")
+markets <- c("Saudi Arabia","UAE","Egypt","Qatar","Kuwait"); base <- c(560,420,390,230,185)*1000
+dat <- expand.grid(day=days, market=markets, cohort=c("Target","Control"), stringsAsFactors=FALSE) |>
+  group_by(market) |>
+  mutate(b=base[match(market,markets)],
+         tr=as.numeric(day-min(day))*ifelse(cohort=="Target",.045,.012),
+         dau=round(b*(1+tr)*runif(n(),.96,1.05))) |> ungroup()
+
+trend <- dat |> group_by(day, cohort) |> summarise(dau=sum(dau), .groups="drop")
+p <- ggplot(trend, aes(day, dau, color=cohort, fill=cohort)) +
+  geom_area(data=subset(trend, cohort=="Target"), alpha=.18, color=NA) +
+  geom_line(aes(linetype=cohort), linewidth=1.2) + geom_point(size=2.2) +
+  scale_color_manual(values=c(Target=pal$gold, Control=pal$violet)) +
+  scale_fill_manual(values=c(Target=pal$gold, Control=pal$violet)) +
+  scale_y_continuous(labels=label_number(scale=1e-6, suffix="M")) +
+  labs(title="Daily active viewers", x=NULL, y=NULL) + theme_glossy()
+ggplotly(p) |> layout(paper_bgcolor=pal$bg, plot_bgcolor=pal$bg, font=list(color=pal$ink))
+```
+
+## 02 · Market race (animated)
+
+```{r}
+#| fig-width: 8
+#| fig-height: 4.2
+race <- dat |> filter(cohort=="Target") |> group_by(day, market) |>
+  summarise(dau=sum(dau), .groups="drop")
+a <- ggplot(race, aes(reorder(market, dau), dau, fill=market)) +
+  geom_col(width=.72, show.legend=FALSE) + coord_flip() +
+  scale_fill_manual(values=colorRampPalette(c(pal$gold, pal$violet, pal$teal))(5)) +
+  labs(title="Market race — {format(frame_time,'%b %d')}", x=NULL, y="Daily active") +
+  theme_glossy() + transition_time(day) + ease_aes("cubic-in-out")
+animate(a, width=760, height=400, fps=18, duration=7,
+        renderer=gifski_renderer(), bg=pal$bg)   # Quarto embeds the GIF automatically
+```
+
+## 03 · Market detail
+
+```{r}
+tbl <- dat |> filter(day==max(day)) |> group_by(market) |>
+  summarise(dau=sum(dau), .groups="drop") |> arrange(desc(dau))
+reactable(tbl, sortable=TRUE, highlight=TRUE,
+  theme=reactableTheme(color=pal$ink, backgroundColor=pal$bg,
+    borderColor=pal$grid, highlightColor="#1a2335",
+    headerStyle=list(color=pal$muted, textTransform="uppercase", fontSize="11px")),
+  columns=list(dau=colDef(name="Daily Active", format=colFormat(separators=TRUE))))
+```
+
+<!--
+Render from a Databricks R cell:
+  rmarkdown::render("engagement_report.qmd",
+                    output_file="/Volumes/catalog/schema/reports/report.html")
+embed-resources:true gives ONE portable .html with all images/widgets inlined.
+-->

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engagement Report — Preview</title>
+<style>
+  :root{
+    --bg:#070A12; --panel:#0E1320; --panel2:#121828;
+    --line:#1E2638; --ink:#EEF1F7; --muted:#8B95A8; --faint:#5A6478;
+    --gold:#F5C518; --gold-d:#B8920F; --teal:#27C2B6; --violet:#8B7BF0;
+    --grid:#19202F;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(245,197,24,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, rgba(139,123,240,.08), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:48px 28px 80px}
+
+  /* Header */
+  .eyebrow{font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold);
+    font-weight:600; margin:0 0 14px}
+  h1{font-size:clamp(30px,5vw,48px); line-height:1.05; margin:0 0 12px; font-weight:800;
+    letter-spacing:-.02em;
+    background:linear-gradient(180deg,#fff,#C8CEDC); -webkit-background-clip:text;
+    background-clip:text; color:transparent}
+  .lede{color:var(--muted); max-width:62ch; margin:0; font-size:17px}
+  .meta{display:flex; gap:22px; flex-wrap:wrap; margin-top:22px; padding-top:22px;
+    border-top:1px solid var(--line); color:var(--faint); font-size:13px}
+  .meta b{color:var(--ink); font-weight:600}
+
+  /* KPI row */
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin:36px 0}
+  .kpi{position:relative; background:linear-gradient(160deg,var(--panel2),var(--panel));
+    border:1px solid var(--line); border-radius:16px; padding:20px 20px 18px; overflow:hidden}
+  .kpi::before{content:""; position:absolute; inset:0; border-radius:16px; padding:1px;
+    background:linear-gradient(160deg,rgba(245,197,24,.35),transparent 40%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none}
+  .kpi .lab{font-size:12px; color:var(--muted); letter-spacing:.04em; text-transform:uppercase}
+  .kpi .val{font-size:30px; font-weight:800; margin:8px 0 2px; letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums}
+  .kpi .val .pulse{display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:var(--gold); margin-left:8px; vertical-align:middle;
+    box-shadow:0 0 0 0 rgba(245,197,24,.6); animation:pulse 2.2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(245,197,24,.55)}70%{box-shadow:0 0 0 12px rgba(245,197,24,0)}100%{box-shadow:0 0 0 0 rgba(245,197,24,0)}}
+  .kpi .delta{font-size:13px; font-weight:600}
+  .up{color:var(--teal)} .down{color:#F0726A}
+
+  /* Section */
+  section{margin:44px 0}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:18px}
+  .sec-num{font-size:13px; color:var(--gold-d); font-weight:700; font-variant-numeric:tabular-nums}
+  h2{font-size:21px; margin:0; font-weight:700; letter-spacing:-.01em}
+  .sec-sub{color:var(--faint); font-size:13px; margin-left:auto}
+
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line); border-radius:18px; padding:24px}
+  .card.tight{padding:20px}
+  figcaption{color:var(--muted); font-size:13px; margin-top:14px}
+  .badge{display:inline-block; font-size:11px; font-weight:600; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--gold); background:rgba(245,197,24,.10);
+    border:1px solid rgba(245,197,24,.25); padding:3px 9px; border-radius:999px}
+
+  /* Chart text */
+  .ax{fill:var(--faint); font-size:11px; font-family:inherit}
+  .lg{fill:var(--muted); font-size:12px; font-family:inherit}
+
+  /* Animated bar (CSS, stands in for gganimate gif) */
+  .race{display:grid; gap:12px}
+  .row{display:grid; grid-template-columns:130px 1fr 64px; align-items:center; gap:14px}
+  .row .name{font-size:13px; color:var(--ink)}
+  .track{height:26px; background:var(--grid); border-radius:8px; overflow:hidden; position:relative}
+  .fill{height:100%; border-radius:8px; transform-origin:left;
+    background:linear-gradient(90deg,var(--gold-d),var(--gold)); animation:grow 1.6s cubic-bezier(.22,1,.36,1) both}
+  .fill.v{background:linear-gradient(90deg,#5b50b8,var(--violet))}
+  .fill.t{background:linear-gradient(90deg,#178b82,var(--teal))}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .row .num{font-size:13px; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums}
+  .r2 .fill{animation-delay:.12s}.r3 .fill{animation-delay:.24s}.r4 .fill{animation-delay:.36s}.r5 .fill{animation-delay:.48s}
+
+  /* Table */
+  table{width:100%; border-collapse:collapse; font-size:13.5px}
+  thead th{text-align:left; color:var(--muted); font-weight:600; font-size:11px;
+    letter-spacing:.06em; text-transform:uppercase; padding:0 14px 12px; border-bottom:1px solid var(--line)}
+  thead th.r,tbody td.r{text-align:right; font-variant-numeric:tabular-nums}
+  tbody td{padding:13px 14px; border-bottom:1px solid rgba(30,38,56,.6)}
+  tbody tr:hover{background:rgba(245,197,24,.04)}
+  tbody td:first-child{font-weight:600}
+  .chip{display:inline-flex; align-items:center; gap:7px}
+  .dot{width:8px; height:8px; border-radius:50%}
+  .micro{display:inline-block; height:18px; vertical-align:middle}
+  .tag{font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px}
+  .tag.good{color:var(--teal); background:rgba(39,194,182,.12)}
+  .tag.warn{color:var(--gold); background:rgba(245,197,24,.12)}
+  .tag.bad{color:#F0726A; background:rgba(240,114,106,.12)}
+
+  .foot{margin-top:60px; padding-top:22px; border-top:1px solid var(--line);
+    color:var(--faint); font-size:12px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px}
+
+  @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)} .row{grid-template-columns:96px 1fr 52px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Weekly Performance · MENA</p>
+    <h1>Streaming Engagement Report</h1>
+    <p class="lede">Daily active viewers, watch-time and retention across markets — with target-versus-control lift for the current campaign window.</p>
+    <div class="meta">
+      <span><b>Window</b> &nbsp;Jun 09 – Jun 15, 2026</span>
+      <span><b>Markets</b> &nbsp;6</span>
+      <span><b>Source</b> &nbsp;Unity Catalog · engagement_daily</span>
+      <span><b>Refreshed</b> &nbsp;06:00 AST</span>
+    </div>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lab">Daily Active</div><div class="val">1.84M <span class="pulse"></span></div><div class="delta up">▲ 6.2% WoW</div></div>
+    <div class="kpi"><div class="lab">Avg Watch / User</div><div class="val">41m</div><div class="delta up">▲ 3.4%</div></div>
+    <div class="kpi"><div class="lab">D7 Retention</div><div class="val">58.1%</div><div class="delta up">▲ 1.9 pts</div></div>
+    <div class="kpi"><div class="lab">Target Lift</div><div class="val">+8.7%</div><div class="delta down">▼ vs last wk</div></div>
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>Engagement trend</h2><span class="sec-sub">ggplot2 · geom_area + geom_line</span></div>
+    <figure class="card" style="margin:0">
+      <svg viewBox="0 0 920 320" width="100%" role="img" aria-label="Engagement trend">
+        <defs>
+          <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#F5C518" stop-opacity=".34"/>
+            <stop offset="1" stop-color="#F5C518" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <!-- grid -->
+        <g stroke="#19202F" stroke-width="1">
+          <line x1="60" y1="40"  x2="900" y2="40"/>
+          <line x1="60" y1="100" x2="900" y2="100"/>
+          <line x1="60" y1="160" x2="900" y2="160"/>
+          <line x1="60" y1="220" x2="900" y2="220"/>
+          <line x1="60" y1="280" x2="900" y2="280"/>
+        </g>
+        <g class="ax" text-anchor="end">
+          <text x="50" y="44">2.0M</text><text x="50" y="104">1.6M</text>
+          <text x="50" y="164">1.2M</text><text x="50" y="224">0.8M</text><text x="50" y="284">0.4M</text>
+        </g>
+        <!-- area + line: target -->
+        <path d="M60,210 L200,180 L340,196 L480,150 L620,120 L760,96 L900,72 L900,280 L60,280 Z" fill="url(#ga)"/>
+        <path d="M60,210 L200,180 L340,196 L480,150 L620,120 L760,96 L900,72" fill="none" stroke="#F5C518" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+        <!-- control -->
+        <path d="M60,214 L200,206 L340,210 L480,196 L620,190 L760,182 L900,176" fill="none" stroke="#8B7BF0" stroke-width="2.5" stroke-dasharray="6 5" stroke-linecap="round"/>
+        <g fill="#F5C518"><circle cx="900" cy="72" r="4.5"/></g>
+        <g class="ax" text-anchor="middle">
+          <text x="60" y="304">Mon</text><text x="200" y="304">Tue</text><text x="340" y="304">Wed</text>
+          <text x="480" y="304">Thu</text><text x="620" y="304">Fri</text><text x="760" y="304">Sat</text><text x="900" y="304">Sun</text>
+        </g>
+        <!-- legend -->
+        <g class="lg"><rect x="640" y="14" width="14" height="3" fill="#F5C518" rx="1.5"/><text x="662" y="20">Target</text>
+        <rect x="730" y="14" width="14" height="3" fill="#8B7BF0" rx="1.5"/><text x="752" y="20">Control</text></g>
+      </svg>
+      <figcaption>Target cohort widened its lead through the weekend, peaking Sunday at ~1.9M daily active.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>Market race</h2><span class="sec-sub badge">animated · gganimate</span></div>
+    <div class="card">
+      <div class="race">
+        <div class="row r1"><span class="name">Saudi Arabia</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="num">612k</span></div>
+        <div class="row r2"><span class="name">UAE</span><div class="track"><div class="fill v" style="width:73%"></div></div><span class="num">448k</span></div>
+        <div class="row r3"><span class="name">Egypt</span><div class="track"><div class="fill t" style="width:66%"></div></div><span class="num">404k</span></div>
+        <div class="row r4"><span class="name">Qatar</span><div class="track"><div class="fill" style="width:41%"></div></div><span class="num">251k</span></div>
+        <div class="row r5"><span class="name">Kuwait</span><div class="track"><div class="fill v" style="width:32%"></div></div><span class="num">196k</span></div>
+      </div>
+      <figcaption>In Databricks this is a real <b>gganimate</b> GIF, base64-embedded so it plays inline — the bars animate across the campaign window. (CSS stand-in shown here.)</figcaption>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Market detail</h2><span class="sec-sub">enriched table · gt / reactable</span></div>
+    <div class="card tight">
+      <table>
+        <thead><tr>
+          <th>Market</th><th class="r">Daily Active</th><th class="r">Watch (avg)</th>
+          <th class="r">D7 Ret.</th><th>7-day trend</th><th>Lift</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="chip"><span class="dot" style="background:#F5C518"></span>Saudi Arabia</span></td>
+            <td class="r">612,400</td><td class="r">44m</td><td class="r">61.2%</td>
+            <td><svg class="micro" width="84" viewBox="0 0 84 18"><polyline points="0,14 14,12 28,13 42,8 56,9 70,5 84,3" fill="none" stroke="#27C2B6" stroke-width="2"/></svg></td>
+            <td><span class="tag good">+11.4%</span></td>
+          </tr>
+          <tr>
+            <td><span class="chip"><span class="dot" style="background:#8B7BF0"></span>UAE</span></td>
+            <td class="r">448,100</td><td class="r">39m</td><td class="r">57.8%</td>
+            <td><svg class="micro" width="84" viewBox="0 0 84 18"><polyline points="0,9 14,10 28,7 42,9 56,6 70,7 84,5" fill="none" stroke="#27C2B6" stroke-width="2"/></svg></td>
+            <td><span class="tag good">+9.1%</span></td>
+          </tr>
+          <tr>
+            <td><span class="chip"><span class="dot" style="background:#27C2B6"></span>Egypt</span></td>
+            <td class="r">404,300</td><td class="r">37m</td><td class="r">54.0%</td>
+            <td><svg class="micro" width="84" viewBox="0 0 84 18"><polyline points="0,8 14,9 28,8 42,10 56,9 70,11 84,10" fill="none" stroke="#F5C518" stroke-width="2"/></svg></td>
+            <td><span class="tag warn">+4.6%</span></td>
+          </tr>
+          <tr>
+            <td><span class="chip"><span class="dot" style="background:#F5C518"></span>Qatar</span></td>
+            <td class="r">251,000</td><td class="r">46m</td><td class="r">63.5%</td>
+            <td><svg class="micro" width="84" viewBox="0 0 84 18"><polyline points="0,12 14,10 28,11 42,7 56,6 70,4 84,3" fill="none" stroke="#27C2B6" stroke-width="2"/></svg></td>
+            <td><span class="tag good">+12.8%</span></td>
+          </tr>
+          <tr>
+            <td><span class="chip"><span class="dot" style="background:#8B7BF0"></span>Kuwait</span></td>
+            <td class="r">196,200</td><td class="r">35m</td><td class="r">51.1%</td>
+            <td><svg class="micro" width="84" viewBox="0 0 84 18"><polyline points="0,7 14,8 28,9 42,8 56,11 70,10 84,12" fill="none" stroke="#F0726A" stroke-width="2"/></svg></td>
+            <td><span class="tag bad">-2.3%</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="foot">
+    <span>Generated in Azure Databricks · R 4.x · ggplot2 · gganimate · gt</span>
+    <span>engagement_report.qmd</span>
+  </div>
+
+</div>
+</body>
+</html>
